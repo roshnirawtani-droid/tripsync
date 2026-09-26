@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRequireTripSession } from "@/lib/TripSessionContext";
 import { FitStatus, OptionEnrichment, Trip, TripOption } from "@/lib/types";
@@ -15,6 +15,10 @@ import {
   BadgeCheck,
   MapPin,
 } from "lucide-react";
+import IceSkyReveal from "@/components/IceSkyReveal";
+import Snowfall from "@/components/Snowfall";
+import { formatDateRange } from "@/lib/format";
+import { notifyTripChanged } from "@/lib/trip-events";
 import { button, card, pageHeading } from "@/lib/ui";
 
 const FIT_ICON: Record<FitStatus, typeof CheckCircle2> = {
@@ -23,8 +27,8 @@ const FIT_ICON: Record<FitStatus, typeof CheckCircle2> = {
   conflict: XCircle,
 };
 const FIT_COLOR: Record<FitStatus, string> = {
-  good: "text-emerald-600",
-  compromise: "text-amber-600",
+  good: "text-sky-700",
+  compromise: "text-amber-700",
   conflict: "text-rose-600",
 };
 
@@ -45,6 +49,8 @@ export default function OptionDetailPage({
   const [error, setError] = useState<string | null>(null);
   const [enrichment, setEnrichment] = useState<OptionEnrichment | null>(null);
   const [enrichmentLoading, setEnrichmentLoading] = useState(true);
+  const [celebrating, setCelebrating] = useState(false);
+  const endCelebration = useCallback(() => setCelebrating(false), []);
 
   useEffect(() => {
     async function load() {
@@ -89,13 +95,15 @@ export default function OptionDetailPage({
       return;
     }
     setTrip(json.trip);
+    setCelebrating(true);
+    notifyTripChanged();
   }
 
   if (sessionLoading || loading) {
-    return <p className="text-stone-500">Loading…</p>;
+    return <p className="pt-10 text-white/80">Loading…</p>;
   }
   if (!option) {
-    return <p className="text-stone-600">Option not found.</p>;
+    return <p className="pt-10 text-white">Option not found.</p>;
   }
 
   // Any signed-in member can lock - it's the group's decision, not just the coordinator's.
@@ -104,44 +112,64 @@ export default function OptionDetailPage({
   const isThisLocked = trip?.locked_option_id === option.id;
   const memberNameById = new Map(members.map((m) => [m.id, m.name]));
   const cost = option.est_cost_per_person;
+  // Proposed options only carry a total; a breakdown of zeros would read
+  // as "free travel and stay" rather than "not estimated".
+  const hasBreakdown = cost.travel + cost.stay + cost.food + cost.activities > 0;
 
   return (
     <div className="space-y-6">
+      {celebrating && <Snowfall onDone={endCelebration} />}
       <button
         onClick={() => router.push(`/trip/${tripId}/options`)}
-        className="flex items-center gap-1 text-sm font-semibold text-orange-600"
+        className="flex items-center gap-1 text-sm font-semibold text-sky-100 transition hover:text-white"
       >
         <ArrowLeft size={16} /> All options
       </button>
 
       <div>
         <h1 className={`${pageHeading} flex items-center gap-2`}>
-          <MapPin className="text-orange-500" size={22} /> {option.destination}
+          <MapPin className="text-brand-600" size={22} /> {option.destination}
         </h1>
         <p className="mt-1 text-sm text-stone-600">{option.summary}</p>
       </div>
 
+      {isThisLocked && trip && (
+        <IceSkyReveal
+          tripName={trip.name}
+          destination={option.destination}
+          dates={formatDateRange(trip.date_window_start, trip.date_window_end)}
+          travellers={members.map((m) => m.name)}
+          shareUrl={`${window.location.origin}/trip/${tripId}/join`}
+        />
+      )}
+
       <section className={card}>
         <h2 className="mb-2 text-sm font-bold text-stone-800">Estimated cost per person</h2>
         <dl className="grid grid-cols-2 gap-y-1.5 text-sm text-stone-600">
-          <dt>Travel</dt>
-          <dd className="text-right">₹{cost.travel.toLocaleString("en-IN")}</dd>
-          <dt>Stay</dt>
-          <dd className="text-right">₹{cost.stay.toLocaleString("en-IN")}</dd>
-          <dt>Food</dt>
-          <dd className="text-right">₹{cost.food.toLocaleString("en-IN")}</dd>
-          <dt>Activities</dt>
-          <dd className="text-right">₹{cost.activities.toLocaleString("en-IN")}</dd>
-          <dt className="border-t border-stone-100 pt-1.5 font-bold text-stone-800">Total</dt>
-          <dd className="border-t border-stone-100 pt-1.5 text-right font-bold text-stone-800">
+          {hasBreakdown && (
+            <>
+              <dt>Travel</dt>
+              <dd className="text-right">₹{cost.travel.toLocaleString("en-IN")}</dd>
+              <dt>Stay</dt>
+              <dd className="text-right">₹{cost.stay.toLocaleString("en-IN")}</dd>
+              <dt>Food</dt>
+              <dd className="text-right">₹{cost.food.toLocaleString("en-IN")}</dd>
+              <dt>Activities</dt>
+              <dd className="text-right">₹{cost.activities.toLocaleString("en-IN")}</dd>
+            </>
+          )}
+          <dt className={`font-bold text-stone-800 ${hasBreakdown ? "border-t border-stone-100 pt-1.5" : ""}`}>Total</dt>
+          <dd className={`text-right font-bold text-stone-800 ${hasBreakdown ? "border-t border-stone-100 pt-1.5" : ""}`}>
             ₹{cost.total.toLocaleString("en-IN")}
           </dd>
         </dl>
-        <p className="mt-2 text-xs text-stone-400">All figures are estimates.</p>
+        <p className="mt-2 text-xs text-stone-500">
+          {hasBreakdown ? "All figures are estimates." : "A rough total from whoever proposed it."}
+        </p>
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-stone-800">Where the group stands</h2>
+        <h2 className="mb-2 text-sm font-bold text-white">Where the group stands</h2>
         <ul className={`${card} divide-y divide-stone-100 !p-0`}>
           {Object.entries(option.fit_grid).map(([memberId, fit]) => {
             const Icon = FIT_ICON[fit.status];
@@ -158,12 +186,12 @@ export default function OptionDetailPage({
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-stone-800">Day-by-day roadmap</h2>
+        <h2 className="mb-2 text-sm font-bold text-white">Day-by-day roadmap</h2>
         <ol className="space-y-3">
           {option.roadmap.map((day) => (
             <li key={day.day} className={card}>
               <p className="flex items-center gap-2 text-sm font-bold text-stone-800">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-xs text-white">
+                <span className="btn-glacier flex h-6 w-6 items-center justify-center rounded-full text-xs">
                   {day.day}
                 </span>
                 {day.title}
@@ -179,9 +207,9 @@ export default function OptionDetailPage({
       </section>
 
       <section>
-        <h2 className="mb-2 text-sm font-bold text-stone-800">Local info</h2>
+        <h2 className="mb-2 text-sm font-bold text-white">Local info</h2>
         {enrichmentLoading ? (
-          <p className="text-sm text-stone-500">Loading local info…</p>
+          <p className="text-sm text-white/80">Loading local info…</p>
         ) : (
           <div className="space-y-3">
             {enrichment?.weather && (
@@ -237,7 +265,7 @@ export default function OptionDetailPage({
               !enrichment.weather &&
               !enrichment.attractions?.length &&
               !enrichment.stays?.length && (
-                <p className="text-sm text-stone-500">
+                <p className="text-sm text-white/80">
                   Local info isn&apos;t available for this option right now.
                 </p>
               )}
@@ -245,16 +273,16 @@ export default function OptionDetailPage({
         )}
       </section>
 
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className="text-sm font-medium text-rose-300">{error}</p>}
 
-      {isThisLocked && (
-        <p className="flex items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          <BadgeCheck size={18} /> This is the locked trip plan.
+      {isLocked && !isThisLocked && (
+        <p className="flex items-center gap-2 rounded-2xl bg-stone-100 px-4 py-3 text-sm font-medium text-stone-600">
+          <BadgeCheck size={18} /> The group locked a different option.
         </p>
       )}
       {!isLocked && canLock && (
         <button onClick={handleLock} disabled={locking} className={`${button.success} w-full`}>
-          {locking ? "Locking…" : "Lock this option for the group"}
+          <BadgeCheck size={18} /> {locking ? "Locking…" : "Lock this plan for the group"}
         </button>
       )}
     </div>

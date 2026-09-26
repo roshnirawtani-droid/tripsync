@@ -8,23 +8,45 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-dm-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-sora);
+  --font-display: var(--font-fraunces);
+
+  /* Ember: the paraglider-orange accent from the hero reel. It sits
+     opposite the reel's glacial blues, so it stands out on the dark
+     mountain photo; 700+ keeps white button text above 4.5:1. */
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #f97316;
+  --color-brand-600: #ea580c;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+  --color-brand-950: #431407;
+
+  /* Warm snow-paper page background the photo bands fade into. */
+  --color-paper: #f7f3ee;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
 }
 
+/* Fraunces' SOFT axis rounds the serifs - warm and snow-softened
+   rather than bookish - while opsz keeps big headlines crisp. */
 .font-display {
-  font-family: var(--font-sora), var(--font-geist-sans), sans-serif;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-variation-settings: "SOFT" 100;
+  letter-spacing: -0.01em;
 }
 
 ::selection {
-  background: #99f6e4;
+  background: #fed7aa;
   color: #0f172a;
 }
 
@@ -39,6 +61,261 @@ body {
   }
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes snow-fall {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--drift, 0), 105vh);
+    opacity: 0.2;
+  }
+}
+
+@keyframes aurora {
+  from {
+    transform: translateX(-6%) scaleY(0.9);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateX(8%) scaleY(1.1);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[slide-in"] {
+    animation: none !important;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 .animate-fade-up {
   animation: fade-up 0.35s ease-out both;
+}
+
+/* Polished liquid-glass ice buttons, in the same glacier colours. The
+   quality comes from precision rather than effects: a 1px gradient rim
+   (bright on top, deeper below - the background padding-box/border-box
+   trick), a soft top sheen that fades out (::before), a hairline inner
+   highlight, tight layered shadows, and a 1px lift on hover. A faint
+   light sweep (::after) crosses on hover. Navy text stays above 6.5:1. */
+@layer components {
+  .btn-glacier,
+  .btn-ice,
+  .btn-glass-dark {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid transparent;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
+    transition:
+      transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      background 180ms ease;
+  }
+  .btn-glacier:hover:not(:disabled),
+  .btn-ice:hover:not(:disabled),
+  .btn-glass-dark:hover {
+    transform: translateY(-1px);
+  }
+  .btn-glacier:active:not(:disabled),
+  .btn-ice:active:not(:disabled),
+  .btn-glass-dark:active {
+    transform: translateY(0);
+  }
+
+  /* Soft sheen over the top half, fading to nothing. */
+  .btn-glacier::before,
+  .btn-ice::before,
+  .btn-glass-dark::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 45% 0;
+    z-index: -1;
+    border-radius: inherit;
+    border-bottom-left-radius: 50% 20%;
+    border-bottom-right-radius: 50% 20%;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0));
+  }
+
+  /* A faint band of light that crosses on hover. */
+  .btn-glacier::after,
+  .btn-ice::after,
+  .btn-glass-dark::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -60%;
+    width: 40%;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.45;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+    transform: skewX(-18deg);
+    transition: left 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .btn-glacier:hover:not(:disabled)::after,
+  .btn-ice:hover:not(:disabled)::after,
+  .btn-glass-dark:hover::after {
+    left: 125%;
+  }
+
+  .btn-glacier {
+    color: #07344d;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+    background:
+      linear-gradient(180deg, #d4efff 0%, #8fd8fb 48%, #4cc3f5 100%) padding-box,
+      linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, #38bdf8 45%, #0284c7 100%) border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      inset 0 -1px 0 rgba(2, 132, 199, 0.3),
+      0 1px 2px rgba(2, 132, 199, 0.3),
+      0 6px 16px -6px rgba(2, 132, 199, 0.5);
+  }
+  .btn-glacier:hover:not(:disabled) {
+    background:
+      linear-gradient(180deg, #e0f4ff 0%, #9fdefc 48%, #5ccaf7 100%) padding-box,
+      linear-gradient(180deg, #ffffff 0%, #38bdf8 45%, #0284c7 100%) border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      inset 0 -1px 0 rgba(2, 132, 199, 0.3),
+      0 2px 4px rgba(2, 132, 199, 0.25),
+      0 12px 24px -8px rgba(2, 132, 199, 0.55);
+  }
+  .btn-glacier:active:not(:disabled) {
+    box-shadow:
+      inset 0 1px 3px rgba(2, 132, 199, 0.35),
+      0 1px 2px rgba(2, 132, 199, 0.3);
+  }
+  .btn-glacier:focus-visible {
+    outline: 2px solid #0284c7;
+    outline-offset: 3px;
+  }
+
+  .btn-ice {
+    color: #0c4a6e;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 249, 255, 0.86) 100%) padding-box,
+      linear-gradient(180deg, #ffffff 0%, rgba(125, 211, 252, 0.9) 100%) border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 1px 2px rgba(15, 23, 42, 0.08),
+      0 4px 12px -6px rgba(12, 74, 110, 0.25);
+  }
+  .btn-ice::before {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0));
+  }
+  .btn-ice:hover:not(:disabled) {
+    background:
+      linear-gradient(180deg, #ffffff 0%, rgba(224, 242, 254, 0.95) 100%) padding-box,
+      linear-gradient(180deg, #ffffff 0%, #38bdf8 100%) border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 2px 4px rgba(15, 23, 42, 0.08),
+      0 10px 20px -10px rgba(12, 74, 110, 0.35);
+  }
+  .btn-ice:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 3px;
+  }
+
+  /* The same glass for controls that sit directly on photos or video. */
+  .btn-glass-dark {
+    color: #ffffff;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%) padding-box,
+      linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.12) 100%) border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 1px 2px rgba(2, 6, 23, 0.3),
+      0 8px 20px -10px rgba(2, 6, 23, 0.55);
+  }
+  .btn-glass-dark::before {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  }
+  .btn-glass-dark:hover {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.12) 100%) padding-box,
+      linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.18) 100%) border-box;
+  }
+  .btn-glass-dark:focus-visible {
+    outline: 2px solid #bae6fd;
+    outline-offset: 3px;
+  }
+
+  /* Liquid-glass surfaces: cards and pills floating over photos. */
+  .glass-surface {
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.95),
+      inset 0 -1px 1px rgba(255, 255, 255, 0.35),
+      0 24px 60px -24px rgba(15, 23, 42, 0.5);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-glacier,
+    .btn-ice,
+    .btn-glass-dark,
+    .btn-glacier::after,
+    .btn-ice::after,
+    .btn-glass-dark::after {
+      transition: none;
+    }
+    .btn-glacier:hover:not(:disabled),
+    .btn-ice:hover:not(:disabled),
+    .btn-glass-dark:hover {
+      transform: none;
+    }
+  }
 }

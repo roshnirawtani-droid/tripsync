@@ -13,7 +13,7 @@ const FIT_ICON: Record<FitStatus, typeof CheckCircle2> = {
   conflict: XCircle,
 };
 const FIT_COLOR: Record<FitStatus, string> = {
-  good: "bg-emerald-50 text-emerald-700",
+  good: "bg-sky-50 text-sky-700",
   compromise: "bg-amber-50 text-amber-700",
   conflict: "bg-rose-50 text-rose-700",
 };
@@ -107,7 +107,7 @@ export default function OptionsPage({
   }
 
   if (sessionLoading || loading) {
-    return <p className="text-stone-500">Loading…</p>;
+    return <p className="pt-10 text-white/80">Loading…</p>;
   }
 
   const memberNameById = new Map(members.map((m) => [m.id, m.name]));
@@ -120,7 +120,7 @@ export default function OptionsPage({
         <p className={pageSubheading}>
           {isLocked
             ? "This trip is locked."
-            : "Ask the app to plan 3 AI options from everyone's preferences, or add your own - anyone can lock the group's final pick."}
+            : "Let the app plan 3 trips around everyone's budget, dates and dealbreakers - or pitch your own. Anyone can lock the final pick."}
         </p>
       </div>
 
@@ -132,7 +132,7 @@ export default function OptionsPage({
               ? "Generating with Gemini…"
               : options.some((o) => o.tags.source === "ai")
               ? "Regenerate AI options"
-              : "Ask the app for options"}
+              : "Plan 3 options for us"}
           </button>
           <button
             onClick={() => setShowPropose((v) => !v)}
@@ -142,7 +142,7 @@ export default function OptionsPage({
           </button>
         </div>
       )}
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className="text-sm font-medium text-rose-300">{error}</p>}
 
       {showPropose && (
         <form onSubmit={handlePropose} className={`${card} space-y-3`}>
@@ -150,7 +150,7 @@ export default function OptionsPage({
             value={proposeDestination}
             onChange={(e) => setProposeDestination(e.target.value)}
             className={input}
-            placeholder="Destination (e.g. Gokarna)"
+            placeholder="Destination (e.g. Kasol)"
           />
           <textarea
             value={proposeSummary}
@@ -189,11 +189,11 @@ export default function OptionsPage({
               key={option.id}
               href={`/trip/${tripId}/options/${option.id}`}
               className={`block ${card} transition hover:shadow-md ${
-                optionLocked ? "border-emerald-400 ring-1 ring-emerald-400" : ""
+                optionLocked ? "border-sky-400 ring-1 ring-sky-400" : ""
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base font-bold text-stone-900">{option.destination}</h2>
+                <h2 className="font-display text-lg font-bold text-stone-900">{option.destination}</h2>
                 <div className="flex shrink-0 items-center gap-1.5">
                   {option.tags.source === "manual" && (
                     <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">
@@ -201,7 +201,7 @@ export default function OptionsPage({
                     </span>
                   )}
                   {optionLocked && (
-                    <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                    <span className="flex items-center gap-1 rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-700">
                       <BadgeCheck size={14} /> Locked
                     </span>
                   )}
@@ -231,10 +231,14 @@ export default function OptionsPage({
       </div>
 
       {options.length === 0 && !generating && (
-        <p className="text-center text-sm text-stone-500">No options yet.</p>
+        <div className={`${card} py-10 text-center text-sm text-stone-500`}>
+          <Sparkles size={30} className="mx-auto mb-2 text-brand-300" />
+          <p className="font-semibold text-stone-700">No plans on the table yet</p>
+          <p className="mt-1">Tap &quot;Plan 3 options for us&quot; and watch everyone&apos;s answers turn into trips.</p>
+        </div>
       )}
       {options.length > 0 && !isLocked && (
-        <p className="text-center text-sm text-stone-500">
+        <p className="text-center text-sm text-white/75">
           Open an option to review it fully and lock it in for the group.
         </p>
       )}

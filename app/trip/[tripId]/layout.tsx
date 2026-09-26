@@ -1,5 +1,5 @@
 import { TripSessionProvider } from "@/lib/TripSessionContext";
-import TripNav from "@/components/TripNav";
+import TripShell from "@/components/TripShell";
 
 export default async function TripLayout({
   children,
@@ -11,10 +11,7 @@ export default async function TripLayout({
   const { tripId } = await params;
   return (
     <TripSessionProvider tripId={tripId}>
-      <div className="min-h-screen bg-stone-50 pb-16 sm:pb-0">
-        <TripNav tripId={tripId} />
-        <main className="mx-auto max-w-2xl animate-fade-up px-4 py-6">{children}</main>
-      </div>
+      <TripShell tripId={tripId}>{children}</TripShell>
     </TripSessionProvider>
   );
 }

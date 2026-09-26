@@ -1,6 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { use, useCallback, useEffect, useState } from "react";
 import { useRequireTripSession } from "@/lib/TripSessionContext";
 import {
   DEALBREAKERS,
@@ -21,7 +23,14 @@ import {
   CalendarRange,
   Ban,
   Sparkles,
+  Check,
+  Lock,
+  PartyPopper,
 } from "lucide-react";
+import Snowfall from "@/components/Snowfall";
+import { VIBE_PHOTOS } from "@/lib/backgrounds";
+import { takeVibeHint } from "@/lib/client-session";
+import { notifyTripChanged } from "@/lib/trip-events";
 import { button, card, input, label as labelClass, pageHeading, pageSubheading } from "@/lib/ui";
 
 const LABELS: Record<DestinationType, string> = {
@@ -68,6 +77,9 @@ export default function PreferencesPage({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
+  const [groupProgress, setGroupProgress] = useState<{ submitted: number; total: number } | null>(null);
+  const endCelebration = useCallback(() => setCelebrating(false), []);
 
   useEffect(() => {
     if (!session) return;
@@ -102,6 +114,10 @@ export default function PreferencesPage({
         // down instead of typing dates from scratch.
         setAvailStart(tripData.date_window_start);
         setAvailEnd(tripData.date_window_end);
+        const hint = takeVibeHint();
+        if (hint && (DESTINATION_TYPES as readonly string[]).includes(hint)) {
+          setPicks([hint as DestinationType]);
+        }
       }
       setLoadingExisting(false);
     }
@@ -167,27 +183,69 @@ export default function PreferencesPage({
       return;
     }
     setSavedAt(json.preference.submitted_at);
+    setCelebrating(true);
+    notifyTripChanged();
+
+    const membersRes = await fetch(`/api/trips/${tripId}/members`);
+    if (membersRes.ok) {
+      const members: { submitted: boolean }[] = (await membersRes.json()).members ?? [];
+      setGroupProgress({ submitted: members.filter((m) => m.submitted).length, total: members.length });
+    }
   }
 
   if (sessionLoading || loadingExisting) {
-    return <p className="text-stone-500">Loading…</p>;
+    return <p className="pt-10 text-white/80">Loading…</p>;
   }
 
   const dateMin = trip?.date_window_start;
   const dateMax = trip?.date_window_end;
+  const isLocked = trip?.status === "locked";
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className={pageHeading}>Hi {session?.name} 👋</h1>
         <p className={pageSubheading}>
-          {savedAt
+          {isLocked
+            ? "The trip is locked, so answers can't change any more."
+            : savedAt
             ? "Submitted. You can update your answers any time before the trip is locked."
-            : "Fill this out so the group can find a trip that works for everyone."}
+            : "Tell the group what works for you - it takes about a minute."}
         </p>
       </div>
 
+      {celebrating && <Snowfall onDone={endCelebration} />}
+
+      {groupProgress && (
+        <div className="flex animate-fade-up items-center gap-3 rounded-3xl bg-sky-50 p-4 ring-1 ring-sky-200">
+          <PartyPopper className="shrink-0 text-sky-700" size={26} />
+          <div className="flex-1 text-sm">
+            <p className="font-bold text-sky-900">You&apos;re in!</p>
+            <p className="text-sky-800">
+              {groupProgress.submitted} of {groupProgress.total} friends have answered.
+              {groupProgress.submitted < groupProgress.total ? " Nudge the rest so the plan can happen." : " Everyone's in - go pick a plan!"}
+            </p>
+          </div>
+          <Link
+            href={`/trip/${tripId}/${groupProgress.submitted < groupProgress.total ? "status" : "options"}`}
+            className="btn-glacier shrink-0 rounded-full px-3.5 py-2 text-xs font-bold transition active:scale-[0.97]"
+          >
+            {groupProgress.submitted < groupProgress.total ? "Nudge" : "Options"}
+          </Link>
+        </div>
+      )}
+
+      {isLocked && (
+        <Link
+          href={`/trip/${tripId}/options/${trip?.locked_option_id}`}
+          className="flex items-center gap-2 rounded-2xl bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800 ring-1 ring-sky-200 transition hover:bg-sky-100"
+        >
+          <Lock size={16} /> Locked in. See the final plan →
+        </Link>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-5">
+        <fieldset disabled={isLocked} className="min-w-0 space-y-5 disabled:opacity-60">
         <section className={card}>
           <label className={labelClass}>
             <IndianRupee size={16} className="mr-1 inline -mt-0.5" /> Max budget per person
@@ -245,10 +303,11 @@ export default function PreferencesPage({
           <label className={labelClass}>
             <Sparkles size={16} className="mr-1 inline -mt-0.5" /> Pick your top {MAX_PICKS} vibes
           </label>
-          <p className="mb-3 -mt-1 text-xs text-stone-400">Tap in order of preference</p>
-          <div className="flex flex-wrap gap-2">
+          <p className="mb-3 -mt-1 text-xs text-stone-500">Tap in order of preference</p>
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
             {DESTINATION_TYPES.map((type) => {
               const Icon = ICONS[type];
+              const photo = VIBE_PHOTOS[type];
               const pickIndex = picks.indexOf(type);
               const selected = pickIndex !== -1;
               return (
@@ -257,18 +316,29 @@ export default function PreferencesPage({
                   type="button"
                   onClick={() => togglePick(type)}
                   disabled={!selected && picks.length >= MAX_PICKS}
-                  className={`flex items-center gap-1.5 rounded-full border-2 px-3.5 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
-                    selected
-                      ? "border-orange-400 bg-orange-50 text-orange-700"
-                      : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                  aria-pressed={selected}
+                  className={`group relative aspect-[4/3] overflow-hidden rounded-2xl text-left transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 ${
+                    selected ? "ring-4 ring-sky-400 ring-offset-2 ring-offset-white" : "ring-1 ring-white/70"
                   }`}
                 >
+                  <Image
+                    src={photo.src}
+                    alt=""
+                    fill
+                    sizes="(min-width: 640px) 200px, 45vw"
+                    loading="eager"
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                    style={{ objectPosition: photo.position }}
+                  />
+                  <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+                  <span className="absolute bottom-2 left-2.5 flex items-center gap-1.5 text-sm font-bold text-white">
+                    <Icon size={15} /> {LABELS[type]}
+                  </span>
                   {selected && (
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+                    <span className="btn-glacier absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-sm">
                       {pickIndex + 1}
                     </span>
                   )}
-                  <Icon size={15} /> {LABELS[type]}
                 </button>
               );
             })}
@@ -285,10 +355,11 @@ export default function PreferencesPage({
                 key={d.value}
                 type="button"
                 onClick={() => toggleDealbreaker(d.value)}
-                className={`rounded-full border-2 px-3 py-1.5 text-sm font-medium transition ${
+                aria-pressed={dealbreakers.has(d.value)}
+                className={`rounded-full px-3.5 py-1.5 text-sm transition active:scale-[0.97] ${
                   dealbreakers.has(d.value)
-                    ? "border-rose-400 bg-rose-50 text-rose-700"
-                    : "border-stone-200 text-stone-600 hover:border-stone-300"
+                    ? "border border-rose-300 bg-rose-50 font-semibold text-rose-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+                    : "btn-ice"
                 }`}
               >
                 {d.label}
@@ -297,11 +368,15 @@ export default function PreferencesPage({
           </div>
         </section>
 
-        {error && <p className="text-sm text-rose-600">{error}</p>}
+        </fieldset>
 
-        <button type="submit" disabled={saving} className={`${button.primary} w-full`}>
-          {saving ? "Saving…" : savedAt ? "Update preferences" : "Submit preferences"}
-        </button>
+        {error && <p className="text-sm font-medium text-rose-300">{error}</p>}
+
+        {!isLocked && (
+          <button type="submit" disabled={saving} className={`${button.primary} w-full`}>
+            {saving ? "Saving…" : savedAt ? <><Check size={18} /> Update my answers</> : "I'm in - submit"}
+          </button>
+        )}
       </form>
     </div>
   );

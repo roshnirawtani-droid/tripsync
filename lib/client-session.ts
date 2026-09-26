@@ -28,3 +28,25 @@ export function clearClientSession(tripId: string): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(storageKey(tripId));
 }
+
+// A vibe tapped on the landing page's mood strip, carried through trip
+// creation so the coordinator's preferences start with it already picked.
+const VIBE_HINT_KEY = "tripsync_vibe_hint";
+
+export function saveVibeHint(vibe: string): void {
+  try {
+    window.localStorage.setItem(VIBE_HINT_KEY, vibe);
+  } catch {
+    // Storage can be unavailable (private mode) - the hint is optional.
+  }
+}
+
+export function takeVibeHint(): string | null {
+  try {
+    const vibe = window.localStorage.getItem(VIBE_HINT_KEY);
+    window.localStorage.removeItem(VIBE_HINT_KEY);
+    return vibe;
+  } catch {
+    return null;
+  }
+}

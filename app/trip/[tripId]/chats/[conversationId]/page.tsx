@@ -84,15 +84,15 @@ export default function ConversationPage({
   }
 
   if (sessionLoading || loading) {
-    return <p className="text-stone-500">Loading…</p>;
+    return <p className="pt-10 text-white/80">Loading…</p>;
   }
   if (error) {
     return (
       <div className="space-y-4">
-        <Link href={`/trip/${tripId}/chats`} className="flex items-center gap-1 text-sm font-semibold text-orange-600">
+        <Link href={`/trip/${tripId}/chats`} className="flex items-center gap-1 text-sm font-semibold text-sky-100 transition hover:text-white">
           <ArrowLeft size={16} /> All chats
         </Link>
-        <p className="text-sm text-rose-600">{error}</p>
+        <p className="text-sm font-medium text-rose-300">{error}</p>
       </div>
     );
   }
@@ -100,10 +100,10 @@ export default function ConversationPage({
   const optionById = new Map(options.map((o) => [o.id, o]));
 
   return (
-    <div className="flex h-[calc(100vh-140px)] flex-col">
+    <div className="flex h-[calc(100dvh-15rem)] min-h-[24rem] flex-col sm:h-[calc(100dvh-13rem)]">
       <Link
         href={`/trip/${tripId}/chats`}
-        className="mb-3 flex items-center gap-1 text-sm font-semibold text-orange-600"
+        className="mb-3 flex items-center gap-1 text-sm font-semibold text-sky-100 transition hover:text-white"
       >
         <ArrowLeft size={16} /> All chats
       </Link>
@@ -117,7 +117,7 @@ export default function ConversationPage({
               <div
                 className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
                   isMe
-                    ? "bg-gradient-to-br from-orange-500 to-rose-500 text-white"
+                    ? "bg-sky-800 text-white"
                     : "border border-stone-200 bg-white text-stone-800"
                 }`}
               >
@@ -138,12 +138,12 @@ export default function ConversationPage({
           );
         })}
         {messages.length === 0 && (
-          <p className="text-center text-sm text-stone-500">No messages yet. Say hi!</p>
+          <p className="text-center text-sm text-white/75">No messages yet. Say hi!</p>
         )}
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSend} className="space-y-2 border-t border-stone-200 pt-3">
+      <form onSubmit={handleSend} className="space-y-2 border-t border-white/15 pt-3">
         {options.length > 0 && (
           <select
             value={attachOptionId}
@@ -168,7 +168,8 @@ export default function ConversationPage({
           <button
             type="submit"
             disabled={sending || !body.trim()}
-            className="flex items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-4 text-white shadow-md shadow-orange-500/20 transition active:scale-95 disabled:opacity-50"
+            aria-label="Send message"
+            className="btn-glacier flex items-center justify-center rounded-full px-4 transition active:scale-95 disabled:opacity-50"
           >
             <Send size={18} />
           </button>

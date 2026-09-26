@@ -80,7 +80,7 @@ export default function ChatsPage({
   }
 
   if (sessionLoading || loading) {
-    return <p className="text-stone-500">Loading…</p>;
+    return <p className="pt-10 text-white/80">Loading…</p>;
   }
 
   return (
@@ -89,7 +89,7 @@ export default function ChatsPage({
         <h1 className={pageHeading}>Private chats</h1>
         <button
           onClick={() => setShowNew((v) => !v)}
-          className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-orange-500/20 transition active:scale-95"
+          className={`${button.primary} !px-4 !py-2 !text-sm`}
         >
           <MessageCirclePlus size={16} /> {showNew ? "Cancel" : "New chat"}
         </button>
@@ -118,7 +118,7 @@ export default function ChatsPage({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className={input}
-              placeholder="e.g. Goa vs Pondicherry"
+              placeholder="e.g. Kasol vs Manali, or Riya's surprise"
             />
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
@@ -142,9 +142,15 @@ export default function ChatsPage({
           </li>
         ))}
         {conversations.length === 0 && (
-          <li className={`${card} flex flex-col items-center gap-2 py-8 text-center text-sm text-stone-500`}>
-            <MessagesSquare size={28} className="text-stone-300" />
-            No chats yet. Start one above.
+          <li className={`${card} flex flex-col items-center gap-2 py-10 text-center text-sm text-stone-500`}>
+            <MessagesSquare size={30} className="text-brand-300" />
+            <span className="font-semibold text-stone-700">No side chats yet</span>
+            Plan a surprise, split a booking, or argue about the itinerary - just the people you pick.
+            {!showNew && (
+              <button onClick={() => setShowNew(true)} className={`${button.primary} mt-2 !px-4 !py-2 !text-sm`}>
+                <MessageCirclePlus size={16} /> Start a chat
+              </button>
+            )}
           </li>
         )}
       </ul>

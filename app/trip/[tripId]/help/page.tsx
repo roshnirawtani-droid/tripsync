@@ -6,6 +6,15 @@ import { HelpQuestion } from "@/lib/types";
 import { Sparkles, MessageSquareText, CircleHelp } from "lucide-react";
 import { button, card, pageHeading, pageSubheading } from "@/lib/ui";
 
+// Questions the AI can actually answer from the trip's options data -
+// a quick way in for people who don't know what to ask.
+const SUGGESTED_QUESTIONS = [
+  "Which option is cheapest per person?",
+  "What's the plan for day 1?",
+  "Which option has no trekking?",
+  "How much is the stay per person?",
+];
+
 export default function HelpPage({
   params,
 }: {
@@ -52,16 +61,32 @@ export default function HelpPage({
   }
 
   if (sessionLoading || loading) {
-    return <p className="text-stone-500">Loading…</p>;
+    return <p className="pt-10 text-white/80">Loading…</p>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className={pageHeading}>Help</h1>
+        <h1 className={pageHeading}>Ask anything</h1>
         <p className={pageSubheading}>
-          Ask the group a question, or ask the AI helper about the trip&apos;s budget, options, and roadmap.
+          Post a question to the group, or tick Ask AI for an instant answer about budgets, options and the roadmap.
         </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {SUGGESTED_QUESTIONS.map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => {
+              setQuestion(q);
+              setAskAI(true);
+            }}
+            className="btn-ice flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition active:scale-[0.97]"
+          >
+            <Sparkles size={12} /> {q}
+          </button>
+        ))}
       </div>
 
       <form onSubmit={handleSubmit} className={`${card} space-y-3`}>
@@ -69,8 +94,8 @@ export default function HelpPage({
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           rows={3}
-          className="w-full rounded-2xl border-2 border-stone-200 bg-white px-4 py-3 text-base text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-orange-400"
-          placeholder="e.g. What's the total per-person cost for the Goa option?"
+          className="w-full rounded-2xl border-2 border-stone-200 bg-white px-4 py-3 text-base text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-sky-500"
+          placeholder="e.g. Who's booking the Volvo to Manali?"
         />
         <div className="flex items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm font-medium text-stone-600">
@@ -78,9 +103,9 @@ export default function HelpPage({
               type="checkbox"
               checked={askAI}
               onChange={(e) => setAskAI(e.target.checked)}
-              className="h-4 w-4 accent-orange-500"
+              className="h-4 w-4 accent-brand-700"
             />
-            <Sparkles size={15} className="text-orange-500" /> Ask AI
+            <Sparkles size={15} className="text-brand-600" /> Ask AI
           </label>
           <button
             type="submit"
@@ -101,8 +126,8 @@ export default function HelpPage({
             </p>
             <p className="mt-1 text-sm text-stone-700">{q.question}</p>
             {q.ai_answer && (
-              <div className="mt-3 rounded-2xl bg-gradient-to-br from-orange-50 to-rose-50 px-3.5 py-2.5 text-sm text-stone-800">
-                <p className="mb-1 flex items-center gap-1 text-xs font-bold text-orange-600">
+              <div className="mt-3 rounded-2xl bg-brand-50 px-3.5 py-2.5 text-sm text-stone-800 ring-1 ring-brand-100">
+                <p className="mb-1 flex items-center gap-1 text-xs font-bold text-brand-800">
                   <Sparkles size={12} /> AI answer
                 </p>
                 {q.ai_answer}
@@ -112,8 +137,9 @@ export default function HelpPage({
         ))}
         {questions.length === 0 && (
           <li className={`${card} flex flex-col items-center gap-2 py-8 text-center text-sm text-stone-500`}>
-            <CircleHelp size={28} className="text-stone-300" />
-            No questions yet.
+            <CircleHelp size={28} className="text-brand-300" />
+            <span className="font-semibold text-stone-700">No questions yet</span>
+            Who&apos;s carrying the speaker? Tap a suggestion above to try Ask AI.
           </li>
         )}
       </ul>

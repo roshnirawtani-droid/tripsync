@@ -1,5 +1,11 @@
 import "server-only";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  GenerativeModel,
+  GoogleGenerativeAI,
+  GoogleGenerativeAIFetchError,
+  ResponseSchema,
+  SchemaType,
+} from "@google/generative-ai";
 import { DESTINATION_TYPES, DestinationType, MatchResult, OptionTags, Trip, TripOption } from "@/lib/types";
 
 export interface GeneratedOption {
@@ -54,10 +60,96 @@ Constraints for the group:
 Return ONLY the JSON array, exactly 3 options, destinations in India, all cost figures as plain numbers (no currency symbols).`;
 }
 
+const DEFAULT_MODEL = "gemini-3.8-flash";
+
+// Structured output: Gemini is constrained to return exactly this JSON
+// shape, so the response parses and validates instead of arriving wrapped
+// in prose or markdown fences.
+const OPTIONS_SCHEMA: ResponseSchema = {
+  type: SchemaType.ARRAY,
+  minItems: 3,
+  maxItems: 3,
+  items: {
+    type: SchemaType.OBJECT,
+    required: ["destination", "summary", "estCostPerPerson", "roadmap", "tags"],
+    properties: {
+      destination: { type: SchemaType.STRING },
+      summary: { type: SchemaType.STRING },
+      estCostPerPerson: {
+        type: SchemaType.OBJECT,
+        required: ["travel", "stay", "food", "activities", "total"],
+        properties: {
+          travel: { type: SchemaType.NUMBER },
+          stay: { type: SchemaType.NUMBER },
+          food: { type: SchemaType.NUMBER },
+          activities: { type: SchemaType.NUMBER },
+          total: { type: SchemaType.NUMBER },
+        },
+      },
+      roadmap: {
+        type: SchemaType.ARRAY,
+        items: {
+          type: SchemaType.OBJECT,
+          required: ["day", "title", "activities"],
+          properties: {
+            day: { type: SchemaType.INTEGER },
+            title: { type: SchemaType.STRING },
+            activities: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+          },
+        },
+      },
+      tags: {
+        type: SchemaType.OBJECT,
+        required: ["primaryType", "requiresFlight", "hasTreks", "longDriveHours", "alcoholCentric"],
+        properties: {
+          primaryType: { type: SchemaType.STRING, format: "enum", enum: [...DESTINATION_TYPES] },
+          requiresFlight: { type: SchemaType.BOOLEAN },
+          hasTreks: { type: SchemaType.BOOLEAN },
+          longDriveHours: { type: SchemaType.NUMBER },
+          alcoholCentric: { type: SchemaType.BOOLEAN },
+        },
+      },
+    },
+  },
+};
+
+function getModel(apiKey: string, json: boolean): GenerativeModel {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  return genAI.getGenerativeModel({
+    model: process.env.GEMINI_MODEL || DEFAULT_MODEL,
+    ...(json
+      ? { generationConfig: { responseMimeType: "application/json", responseSchema: OPTIONS_SCHEMA } }
+      : {}),
+  });
+}
+
+// Configuration problems (bad key, no access, quota, unknown model) will
+// fail the same way on every retry, so they're reported straight away in
+// words the organiser can act on instead of as "invalid options".
+function describeConfigError(err: unknown): string | null {
+  if (!(err instanceof GoogleGenerativeAIFetchError)) return null;
+  const reason = err.errorDetails?.map((d) => (d as { reason?: string }).reason).find(Boolean);
+  if (reason === "API_KEY_INVALID" || err.status === 401) {
+    return "Gemini rejected the API key. Set a valid GEMINI_API_KEY from aistudio.google.com/apikey (it starts with AIza) and restart the server.";
+  }
+  if (err.status === 403) return "This Gemini API key isn't allowed to use the Gemini API. Check the key's project and restrictions.";
+  if (err.status === 429) return "Gemini's rate limit or quota is used up for this key. Wait a minute and try again.";
+  if (err.status === 404) {
+    return `The Gemini model "${process.env.GEMINI_MODEL || DEFAULT_MODEL}" isn't available for this key. Set GEMINI_MODEL to a model your key can use.`;
+  }
+  return null;
+}
+
 function extractJson(text: string): unknown {
   const trimmed = text.trim();
   const withoutFences = trimmed.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
-  return JSON.parse(withoutFences);
+  const parsed: unknown = JSON.parse(withoutFences);
+  // Tolerate the model wrapping the array, e.g. { "options": [...] }.
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    const firstArray = Object.values(parsed).find(Array.isArray);
+    if (firstArray) return firstArray;
+  }
+  return parsed;
 }
 
 function isValidOption(value: unknown): value is GeneratedOption {
@@ -115,10 +207,9 @@ export async function generateTripOptions(match: MatchResult): Promise<Generated
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new GeminiGenerationError("GEMINI_API_KEY is not set");
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
-
+  const model = getModel(apiKey, true);
   const prompt = buildPrompt(match);
+  let lastProblem = "the response didn't match the expected format";
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const promptForAttempt =
@@ -128,17 +219,20 @@ export async function generateTripOptions(match: MatchResult): Promise<Generated
 
     try {
       const result = await model.generateContent(promptForAttempt);
-      const text = result.response.text();
-      const parsed = extractJson(text);
+      const parsed = extractJson(result.response.text());
       if (isValidOptionArray(parsed)) {
         return parsed;
       }
-    } catch {
-      // fall through to retry
+      lastProblem = "the response didn't match the expected format";
+    } catch (err) {
+      const configProblem = describeConfigError(err);
+      if (configProblem) throw new GeminiGenerationError(configProblem);
+      lastProblem = err instanceof Error ? err.message : String(err);
+      console.error("Gemini trip generation failed:", lastProblem);
     }
   }
 
-  throw new GeminiGenerationError("Gemini did not return valid trip options after retrying");
+  throw new GeminiGenerationError(`Gemini did not return valid trip options (${lastProblem}). Please try again.`);
 }
 
 // Best-effort Q&A over the trip's actual data. Failures return a plain
@@ -178,11 +272,11 @@ ${optionsSummary}
 Question: ${question}`;
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
-    const result = await model.generateContent(prompt);
+    const result = await getModel(apiKey, false).generateContent(prompt);
     return result.response.text().trim() || "I couldn't come up with an answer for that.";
-  } catch {
+  } catch (err) {
+    const configProblem = describeConfigError(err);
+    if (configProblem) return `Ask AI isn't working: ${configProblem}`;
     return "Ask AI is temporarily unavailable - try again in a moment.";
   }
 }

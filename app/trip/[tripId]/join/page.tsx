@@ -4,8 +4,9 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTripSession } from "@/lib/TripSessionContext";
 import { UserRound, KeyRound, ArrowRight } from "lucide-react";
-import TripIllustration from "@/components/TripIllustration";
-import { button, card, input, label as labelClass } from "@/lib/ui";
+import PhotoBackdrop from "@/components/PhotoBackdrop";
+import { PAGE_BACKGROUNDS } from "@/lib/backgrounds";
+import { button, frostedCard, input, label as labelClass } from "@/lib/ui";
 
 interface MemberRow {
   id: string;
@@ -77,21 +78,24 @@ export default function JoinPage({
 
   if (notFound) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4 text-center">
-        <p className="text-stone-600">This trip link doesn&apos;t exist.</p>
-      </div>
+      <PhotoBackdrop photo={PAGE_BACKGROUNDS.join}>
+        <div className={`w-full max-w-sm ${frostedCard} text-center`}>
+          <p className="font-display text-lg font-bold text-stone-900">This trip link doesn&apos;t exist.</p>
+          <p className="mt-1 text-sm text-stone-600">Ask whoever shared it to send it again.</p>
+        </div>
+      </PhotoBackdrop>
     );
   }
 
   const selectedMember = members.find((m) => m.id === selectedId);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-stone-50 px-4 py-10">
-      <TripIllustration />
-
-      <div className={`w-full max-w-sm ${card} animate-fade-up`}>
-        <h1 className="text-lg font-bold text-stone-900">{tripName ?? "Loading trip…"}</h1>
-        <p className="mt-1 text-sm text-stone-500">
+    <PhotoBackdrop photo={PAGE_BACKGROUNDS.join}>
+      <p className="mb-5 font-display text-lg font-bold tracking-tight text-white drop-shadow">TripSync</p>
+      <div className={`w-full max-w-sm ${frostedCard} animate-fade-up`}>
+        <p className="text-xs font-bold uppercase tracking-widest text-brand-700">You&apos;re invited</p>
+        <h1 className="mt-1 font-display text-2xl font-bold text-stone-900">{tripName ?? "Loading trip…"}</h1>
+        <p className="mt-1 text-sm text-stone-600">
           Pick your name and set a 4-digit PIN. You&apos;ll use the same PIN next time.
         </p>
 
@@ -138,6 +142,6 @@ export default function JoinPage({
           </button>
         </form>
       </div>
-    </div>
+    </PhotoBackdrop>
   );
 }
