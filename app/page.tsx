@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 import {
   Sparkles,
   MapPin,
@@ -13,6 +14,10 @@ import {
   ArrowLeft,
   Copy,
   Check,
+  Heart,
+  MessageCircle,
+  Send,
+  MoreHorizontal,
 } from "lucide-react";
 import FadeInSection from "@/components/FadeInSection";
 import { button, card, input } from "@/lib/ui";
@@ -358,45 +363,77 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {/* Nav */}
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 pt-6">
-        <span className="font-display text-lg font-bold tracking-tight">TripSync</span>
-        <button
-          onClick={() => setView("wizard")}
-          className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-700"
-        >
-          Start planning
-        </button>
-      </div>
+      {/* Hero: full-bleed photo background */}
+      <div className="relative isolate overflow-hidden pb-16">
+        <div className="absolute inset-0 -z-10">
+          <Image src="/hero-bg.jpg" alt="" fill priority className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/55 to-white" />
+        </div>
 
-      {/* Hero copy */}
-      <div className="mx-auto flex max-w-2xl flex-col items-center px-4 pb-6 pt-12 text-center">
-        <span className="rounded-full bg-teal-50 px-3.5 py-1.5 text-xs font-bold text-teal-700">
-          For groups of 4–10 friends
-        </span>
-        <h1 className="font-display mt-5 max-w-xl text-4xl font-bold leading-tight md:text-5xl">
-          The trip that actually happens
-        </h1>
-        <p className="mx-auto mt-4 max-w-md text-lg font-medium text-slate-500">
-          Everyone puts in what works for them. One plan comes out the other end.
-        </p>
-        <button
-          onClick={() => setView("wizard")}
-          className="mt-7 inline-flex items-center gap-2 rounded-full bg-teal-600 px-7 py-4 text-base font-bold text-white shadow-lg shadow-teal-600/25 transition hover:bg-teal-500 active:scale-95"
-        >
-          Start planning your trip <ArrowRight size={18} />
-        </button>
-      </div>
+        {/* Nav */}
+        <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-4 pt-6">
+          <span className="font-display text-lg font-bold tracking-tight text-white">TripSync</span>
+          <button
+            onClick={() => setView("wizard")}
+            className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-slate-900 transition hover:bg-slate-100"
+          >
+            Start planning
+          </button>
+        </div>
 
-      {/* Hero video: the hook, centered, nothing overlaid */}
-      <div className="mx-auto max-w-3xl px-4 pt-10">
-        <div className="overflow-hidden rounded-[28px] bg-slate-900" style={{ aspectRatio: "16 / 9" }}>
-          <iframe
-            src="https://drive.google.com/file/d/1CTUjvdopRphj82BkXVWzb6uTDAQKoWSp/preview"
-            className="h-full w-full"
-            allow="autoplay"
-            allowFullScreen
-          />
+        {/* Hero copy */}
+        <div className="relative mx-auto flex max-w-2xl flex-col items-center px-4 pb-6 pt-12 text-center">
+          <span className="rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-bold text-white backdrop-blur">
+            For groups of 4–10 friends
+          </span>
+          <h1 className="font-display mt-5 max-w-xl text-4xl font-bold leading-tight text-white md:text-5xl">
+            The trip that actually happens
+          </h1>
+          <p className="mx-auto mt-4 max-w-md text-lg font-medium text-white/80">
+            Everyone puts in what works for them. One plan comes out the other end.
+          </p>
+          <button
+            onClick={() => setView("wizard")}
+            className="mt-7 inline-flex items-center gap-2 rounded-full bg-teal-500 px-7 py-4 text-base font-bold text-white shadow-lg shadow-black/25 transition hover:bg-teal-400 active:scale-95"
+          >
+            Start planning your trip <ArrowRight size={18} />
+          </button>
+        </div>
+
+        {/* Hero video: Instagram Reels-style vertical card */}
+        <div className="relative mx-auto mt-6 w-full max-w-[340px] px-4">
+          <div
+            className="relative overflow-hidden rounded-[32px] bg-black shadow-2xl ring-1 ring-white/10"
+            style={{ aspectRatio: "9 / 16" }}
+          >
+            <iframe
+              src="https://drive.google.com/file/d/1CTUjvdopRphj82BkXVWzb6uTDAQKoWSp/preview"
+              className="h-full w-full"
+              allow="autoplay"
+              allowFullScreen
+            />
+
+            {/* top bar */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/70 to-transparent p-3">
+              <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-teal-400 to-emerald-600 ring-2 ring-white" />
+              <p className="flex-1 text-xs font-bold text-white">tripsync</p>
+              <MoreHorizontal className="text-white" size={18} />
+            </div>
+
+            {/* right action rail */}
+            <div className="pointer-events-none absolute bottom-20 right-2.5 flex flex-col items-center gap-4">
+              <Heart className="text-white drop-shadow" size={24} />
+              <MessageCircle className="text-white drop-shadow" size={24} />
+              <Send className="text-white drop-shadow" size={22} />
+            </div>
+
+            {/* bottom caption */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 pr-12">
+              <p className="text-xs font-bold text-white">
+                tripsync <span className="font-normal text-white/85">Manali, we&apos;re coming for you 🏔️</span>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
