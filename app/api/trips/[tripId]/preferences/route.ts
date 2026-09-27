@@ -32,6 +32,24 @@ export async function GET(
   const session = getSessionFromCookies(req.cookies, trip.id);
   if (!session) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
+  // ?all=1 powers the group status view - every signed-in member can see
+  // everyone's submitted preferences, since that's the whole point of the
+  // app (finding a plan that works for the group, not keeping answers private).
+  if (req.nextUrl.searchParams.get("all") === "1") {
+    const [{ data: prefs, error: prefsError }, { data: members, error: membersError }] =
+      await Promise.all([
+        admin.from("preferences").select("*").eq("trip_id", trip.id).not("submitted_at", "is", null),
+        admin.from("members").select("id, name").eq("trip_id", trip.id),
+      ]);
+    if (prefsError || membersError) {
+      return NextResponse.json({ error: prefsError?.message ?? membersError?.message }, { status: 500 });
+    }
+    const memberNameById = new Map((members ?? []).map((m) => [m.id, m.name]));
+    return NextResponse.json({
+      preferences: (prefs ?? []).map((p) => ({ ...p, memberName: memberNameById.get(p.member_id) ?? "?" })),
+    });
+  }
+
   const { data, error } = await admin
     .from("preferences")
     .select("*")

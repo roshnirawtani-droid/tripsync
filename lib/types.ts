@@ -46,6 +46,7 @@ export interface Preference {
   dealbreakers: Dealbreaker[];
   submitted_at: string | null;
   updated_at: string;
+  memberName?: string;
 }
 
 export interface CostBreakdown {
